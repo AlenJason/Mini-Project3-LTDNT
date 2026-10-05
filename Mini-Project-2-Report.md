@@ -9,8 +9,8 @@
 ## 1. GENERAL INFORMATION & DELIVERABLE LINKS
 * **Team Members:**
   1. Nguyễn Thiên — Student ID: 23IT257 — Role: Sole Developer (Full-stack Mobile) — Contribution: 100%
-* **🔗 Live Demo URL:** Chưa có. Chạy local theo `README.md`: `npm run server` + `npm run dev` (web), hoặc `npm run build && npm start` để một tiến trình phục vụ cả app lẫn server realtime ở `http://localhost:4000`. Bản native chạy qua `npm run cap:android` / `npm run cap:ios`.
-* **💻 GitHub Repository:** Chưa có — cập nhật sau khi push.
+* **🔗 Live Demo URL:** https://mini-project3-ltdnt.vercel.app — bản Web cùng server realtime (Socket.IO trên Vercel Functions, dữ liệu trong Upstash Redis). Mở bằng hai trình duyệt / hai điện thoại, đăng nhập hai MSSV khác nhau để thấy cập nhật realtime. Màn hình trước cửa phòng: https://mini-project3-ltdnt.vercel.app/display/TV-201. Bản native (Android/iOS) chạy qua `npm run cap:android` / `npm run cap:ios` — xem `README.md`.
+* **💻 GitHub Repository:** https://github.com/AlenJason/Mini-Project3-LTDNT
 * **🎥 Video Demo (Optional):** Không có.
 
 > Đề bài ghi "React Native"; bản này được hiện thực bằng **React + Capacitor** (cùng hướng với Project 1.2) — một codebase chạy Web, Android, iOS.
@@ -35,7 +35,7 @@
 
 ## 3. TECHNICAL ARCHITECTURE & PROJECT STRUCTURE
 
-**Stack:** React 19 + TypeScript + Vite, đóng gói bằng Capacitor 8. Server realtime: Node.js + Express 5 + Socket.IO 4, chạy thẳng TypeScript bằng type stripping của Node.
+**Stack:** React 19 + TypeScript + Vite, đóng gói bằng Capacitor 8. Server realtime: Node.js + Express 5 + Socket.IO 4. Deploy: Vercel — web là file tĩnh, server là một Vercel Function (`api/server.ts`, WebSocket trên Fluid Compute, region Singapore), dữ liệu lưu trong Upstash Redis (Vercel Marketplace, gói Free). Chạy local thì server chạy thẳng TypeScript bằng type stripping của Node và lưu dữ liệu trong bộ nhớ + file JSON.
 
 **Cấu trúc thư mục chính:**
 ```
@@ -46,9 +46,14 @@ shared/            Dùng chung client + server
   protocol.ts        Kiểu sự kiện Socket.IO, Result<T>
 server/
   index.ts           Express (REST /api/rooms, phục vụ bản build) + Socket.IO
-  bookingService.ts  Nguồn sự thật: giữ chỗ, đặt, huỷ, check-in, trả phòng sớm, sweep no-show
+  realtime.ts        Express + Socket.IO (+ Redis adapter khi có REDIS_URL)
+  engine.ts          Mỗi thao tác: nạp state -> BookingService -> ghi compare-and-set, xung đột thì thử lại
+  bookingService.ts  Quy tắc nghiệp vụ: giữ chỗ, đặt, huỷ, check-in, trả phòng sớm, sweep no-show
+  store.ts           MemoryStore (local, file JSON) / RedisStore (Vercel, script Lua CAS)
   demoBots.ts        Người dùng demo tự đặt / huỷ / check-in
-  store.ts, seed.ts  Lưu file JSON, dữ liệu mẫu
+  seed.ts            Dữ liệu mẫu
+api/server.ts        Vercel Function: export http.Server của realtime.ts
+vercel.json          Build Vite, chuyển /api/* về function, region sin1
 src/
   store/realtime.ts  Store realtime (useSyncExternalStore): socket, snapshot theo ngày, cache offline
   services/          config, session, storage (Preferences), notifications, haptics
@@ -59,7 +64,7 @@ android/, ios/       Project native do Capacitor sinh ra
 
 **Quản lý trạng thái:** Một store realtime dạng module (không dùng Redux/Zustand) đọc qua `useSyncExternalStore`. Store giữ dữ liệu theo ngày (`days[date]`), "lịch của tôi" và chỗ đang giữ; màn hình nào cần ngày nào thì `watchDay(date)` (đếm tham chiếu, join/leave room Socket.IO tương ứng). Mọi lệnh gửi qua `emitWithAck` có timeout 10 giây và trả về `Result<T>` thống nhất, nên UI chỉ cần xử lý `ok` / `error.message`.
 
-**Chống đặt trùng:** Server là nguồn sự thật duy nhất. Node xử lý từng sự kiện socket tuần tự và `BookingService` hoàn toàn đồng bộ (không `await` giữa bước kiểm tra và bước ghi), nên "kiểm tra trùng rồi ghi" là nguyên tử — không cần khoá. Lớp giữ chỗ 2 phút ngăn hai người cùng điền form cho một khung giờ ngay từ đầu.
+**Chống đặt trùng:** Server là nguồn sự thật duy nhất, kể cả khi Vercel chạy nhiều instance. Mỗi thao tác nạp toàn bộ state từ Redis, chạy `BookingService` (hoàn toàn đồng bộ), rồi ghi lại bằng một script Lua compare-and-set: nếu instance khác đã ghi trước thì phiên bản đã đổi, thao tác được nạp lại và chạy lại. Sự kiện realtime chỉ được phát sau khi ghi thành công, và Socket.IO Redis adapter chuyển chúng tới client đang kết nối ở mọi instance. Lớp giữ chỗ 2 phút ngăn hai người cùng điền form cho một khung giờ ngay từ đầu.
 
 **Chiến lược xử lý ngoại lệ:**
 - Mọi đầu vào từ client được kiểm tra lại ở server (kiểu dữ liệu, ngày hợp lệ, bội số 30 phút, độ dài mục đích, sức chứa); handler bọc `try/catch` và luôn trả ack.
@@ -67,13 +72,13 @@ android/, ios/       Project native do Capacitor sinh ra
 - Mất mạng hoặc server không phản hồi: lệnh trả `NETWORK` sau timeout thay vì treo; UI khoá thao tác đặt, vẫn xem được dữ liệu cache.
 - Gọi plugin native (thông báo, rung) đều bọc `try/catch` và tự bỏ qua trên web.
 
-**Kiểm thử:** 31 unit test (`node --test`) cho giờ campus, quy định đặt phòng và `BookingService` (trùng lịch, giữ chỗ, hết hạn, mất kết nối, check-in sớm / trễ, no-show, trả phòng sớm). Kiểm thử thủ công end-to-end bằng Chrome DevTools (2 người dùng độc lập) và Android emulator (APK debug).
+**Kiểm thử:** 34 unit test (`node --test`) cho giờ campus, quy định đặt phòng, `BookingService` (trùng lịch, giữ chỗ, hết hạn, mất kết nối, check-in sớm / trễ, no-show, trả phòng sớm) và `BookingEngine` (8 người ở 4 instance cùng đặt một khung → đúng 1 người thành công). Kiểm thử end-to-end trên bản production bằng Chrome DevTools (2 người dùng độc lập) và script 6 client đặt đồng thời; bản native kiểm tra trên Android emulator (APK debug).
 
 ---
 
 ## 4. EMPIRICAL EVIDENCE & SCREENSHOTS
 
-*(Ảnh chụp từ ứng dụng đang chạy, viewport 390×844; ảnh 9 chụp từ Android emulator)*
+*(Ảnh 1–8 chụp từ bản production https://mini-project3-ltdnt.vercel.app, viewport 390×844, xem lịch ngày 06/10; ảnh 9 chụp từ Android emulator)*
 
 **Ảnh 1 — Đăng nhập** (`docs/screenshots/01-login.png`)
 Họ tên + MSSV; MSSV là định danh để đồng bộ lịch giữa các thiết bị.
@@ -82,7 +87,7 @@ Họ tên + MSSV; MSSV là định danh để đồng bộ lịch giữa các th
 Số phòng đang trống, dải lịch từng phòng với vạch "bây giờ", lọc theo loại phòng.
 
 **Ảnh 3 — Người dùng A đang chọn giờ** (`docs/screenshots/03-selecting-hold.png`)
-Khung 17:00–18:00 tô vàng, thanh dưới báo *đang giữ chỗ cho bạn*.
+Khung 15:00–16:00 phòng TV-201 tô vàng, thanh dưới báo *đang giữ chỗ cho bạn*.
 
 **Ảnh 4 — Người dùng B thấy ngay khung đang bị giữ** (`docs/screenshots/04-held-by-other-user.png`)
 Khung sọc cam *Có người đang giữ chỗ*, không chọn được.
@@ -91,10 +96,10 @@ Khung sọc cam *Có người đang giữ chỗ*, không chọn được.
 Đếm ngược thời gian giữ chỗ, chọn mục đích, số người (giới hạn theo sức chứa).
 
 **Ảnh 6 — Lịch của tôi** (`docs/screenshots/06-my-bookings.png`)
-Lịch đang dùng (nút *Trả phòng sớm*), lịch sắp tới với giờ mở check-in.
+Hai lịch sắp tới (lab K-105 và phòng TV-201) với thời gian còn lại và giờ mở check-in.
 
 **Ảnh 7 — Màn hình trước cửa phòng** (`docs/screenshots/07-room-display.png`)
-Trạng thái *Đang sử dụng*, người đang dùng, lịch tiếp theo trong ngày.
+Ngoài giờ mở cửa: báo giờ mở lại và lịch ngày mai của phòng, cập nhật realtime (lịch 15:00 vừa đặt ở ảnh 5 xuất hiện ngay). Trong giờ mở cửa, màn hình chuyển xanh *Trống* / đỏ *Đang sử dụng* kèm người đang dùng.
 
 **Ảnh 8 — Offline** (`docs/screenshots/08-offline.png`)
 Banner mất mạng, trạng thái *Mất kết nối*, vẫn xem được dữ liệu đã tải.
@@ -125,3 +130,11 @@ Lịch đặt phòng gắn với giờ tại trường, nhưng `Date` của Java
 **Thách thức 5 — Build Android lỗi "Unsupported class file major version 69"**
 JDK đi kèm Android Studio bản mới là Java 25, Gradle 8.14.3 trong template Capacitor chưa hỗ trợ; nâng Gradle lên 9.x thì build script chạy được nhưng plugin Capacitor 8 lại yêu cầu toolchain Java 21.
 **Giải pháp:** Build bằng JDK 21 (Temurin) — APK debug build thành công, cài lên emulator và kết nối server qua `10.0.2.2:4000`. Hướng dẫn chọn Gradle JDK 21 trong Android Studio được ghi trong `README.md`.
+
+**Thách thức 6 — Deploy lên Vercel: mỗi instance có bộ nhớ riêng nên đặt trùng**
+Bản đầu tiên deploy lên Vercel vẫn lưu lịch trong RAM như khi chạy local. Thử trên production bằng 6 client cùng đặt một khung giờ: cả **6/6 đều thành công**, vì Vercel Functions có thể chạy nhiều instance, mỗi WebSocket gắn với một instance và không instance nào biết lịch của instance khác.
+**Giải pháp:** Chuyển state sang Upstash Redis (Vercel Marketplace) và thêm `BookingEngine`: nạp state → chạy nghiệp vụ → ghi bằng script Lua compare-and-set, xung đột thì thử lại; thêm Socket.IO Redis adapter để sự kiện tới được client ở mọi instance. Chạy lại cùng phép thử trên production: **1 thành công, 5 nhận `SLOT_TAKEN`**, client xem ở instance khác vẫn nhận được sự kiện đặt và huỷ.
+
+**Thách thức 7 — Socket.IO trả 404 trên Vercel**
+REST API (`/api/rooms`) chạy bình thường nhưng WebSocket không kết nối được (`Unexpected server response: 404`). Thử từng đường dẫn cho thấy URL có dấu `/` cuối (`/api/socket.io/`, Socket.IO tự thêm) không khớp rewrite `/api/:path*` nên không vào được function. Thêm vào đó, Vercel biên dịch `api/server.ts` mà giữ nguyên import đuôi `.ts` khiến function không chạy được.
+**Giải pháp:** Đổi rewrite sang `/api/(.*)`, tắt `addTrailingSlash` cho Socket.IO ở cả server và client, chỉ dùng transport `websocket` (Vercel không hỗ trợ long-polling); bật `rewriteRelativeImportExtensions` trong `tsconfig.json` gốc để import được đổi sang `.js` khi biên dịch. Đã kiểm tra bằng `vercel build` chạy local trước, rồi xác nhận WebSocket kết nối được trên production.

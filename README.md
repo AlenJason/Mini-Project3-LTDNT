@@ -5,6 +5,9 @@
 một khung giờ, mọi thiết bị khác thấy ngay qua **Socket.IO**; server là nguồn sự
 thật duy nhất nên không bao giờ có hai lịch trùng giờ.
 
+**Bản chạy thử:** https://mini-project3-ltdnt.vercel.app (web + server realtime trên Vercel,
+dữ liệu trong Upstash Redis) — màn hình cửa phòng: https://mini-project3-ltdnt.vercel.app/display/TV-201
+
 | Danh sách phòng | Đang chọn giờ | Người khác thấy | Lịch của tôi | Màn hình cửa phòng |
 |---|---|---|---|---|
 | ![](docs/screenshots/02-rooms.png) | ![](docs/screenshots/03-selecting-hold.png) | ![](docs/screenshots/04-held-by-other-user.png) | ![](docs/screenshots/06-my-bookings.png) | ![](docs/screenshots/07-room-display.png) |
@@ -146,7 +149,8 @@ npm run cap:ios       # build web -> cap sync -> mở Xcode (cần cài Xcode)
 - **Địa chỉ server**: Android emulator tự dùng `http://10.0.2.2:4000`, iOS
   simulator dùng `http://localhost:4000`. Trên **điện thoại thật**, vào tab
   **Cá nhân → Máy chủ realtime** nhập `http://<IP-LAN-của-máy-tính>:4000` (máy
-  tính và điện thoại cùng Wi-Fi) — không cần build lại. Hoặc đặt
+  tính và điện thoại cùng Wi-Fi) — không cần build lại. Muốn dùng server đã
+  deploy thì nhập `https://mini-project3-ltdnt.vercel.app`. Hoặc đặt
   `VITE_SERVER_URL` trong `.env` (xem `.env.example`).
 - **JDK cho Android**: Capacitor 8 cần **JDK 21**. JDK đi kèm Android Studio mới
   (Java 25) không chạy được Gradle 8.14 — vào *Settings → Build, Execution,
