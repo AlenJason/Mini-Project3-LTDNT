@@ -1,0 +1,14 @@
+# Không cần cho bản web / function trên Vercel
+android
+ios
+docs
+dist
+node_modules
+server/data.json
+.env
+.env.*
+!.env.example
+*.test.ts
+.agents
+.claude
+skills-lock.json

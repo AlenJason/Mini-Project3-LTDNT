@@ -41,3 +41,8 @@ server/data.json
 .vercel
 .env*
 !.env.example
+
+# Agent skills do `vercel integration add` cài thêm (công cụ cho AI, không phải code app)
+.agents/
+.claude/skills/
+skills-lock.json

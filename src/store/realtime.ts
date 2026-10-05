@@ -238,6 +238,8 @@ export async function connect(serverUrl: string, user: User | null) {
 
   const s: AppSocket = io(serverUrl, {
     path: SOCKET_PATH,
+    // Không thêm "/" cuối đường dẫn (khớp với cấu hình server và rewrite của Vercel)
+    addTrailingSlash: false,
     // Vercel Functions chỉ hỗ trợ websocket (không long-polling). Kết nối bị
     // đóng khi function hết thời gian tối đa -> Socket.IO tự kết nối lại.
     transports: ['websocket'],
@@ -287,7 +289,11 @@ export function reconnectNow() {
  * cũ có thể "treo" một lúc lâu trước khi bị phát hiện là đã chết.
  */
 export function goOffline() {
-  if (socket?.connected) socket.disconnect()
+  if (!socket) return
+  // Đang kết nối dở thì disconnect() dừng các lần thử lại; reconnectNow() mở lại khi có mạng
+  const wasConnected = socket.connected
+  socket.disconnect()
+  if (!wasConnected) setState({ status: 'offline' })
 }
 
 /** Theo dõi một ngày. Trả về hàm huỷ theo dõi. */

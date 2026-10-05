@@ -82,6 +82,8 @@ export async function createRealtimeServer(): Promise<RealtimeServer> {
     httpServer,
     {
       path: SOCKET_PATH,
+      // Không thêm "/" cuối đường dẫn: rewrite của Vercel không khớp /api/socket.io/
+      addTrailingSlash: false,
       // Vercel Functions chỉ hỗ trợ websocket, không có long-polling
       transports: ['websocket'],
       // App Capacitor chạy ở origin https://localhost (Android) / capacitor://localhost (iOS)
