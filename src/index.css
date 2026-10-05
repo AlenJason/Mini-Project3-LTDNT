@@ -1,0 +1,170 @@
+/*
+ * Token thiết kế — "thời khoá biểu tô dạ quang":
+ * nền xám sương, chữ xanh thông; vàng dạ quang chỉ dành cho những gì là CỦA BẠN
+ * (khung đang chọn, lịch đã đặt, nút hành động chính); đỏ tín hiệu = "bây giờ".
+ */
+:root {
+  --fog: #e9eeeb;
+  --paper: #f8faf8;
+  --ink: #102a22;
+  --ink-2: #4a5f57;
+  --ink-3: #7f918a;
+  --line: #cbd6d1;
+  --line-soft: #dde5e1;
+  --moss: #2e8b5e;
+  --moss-soft: #d3eadd;
+  --hl: #ffe03a;
+  --hl-ink: #2a2400;
+  --signal: #c42b45;
+  --signal-soft: #f6d9de;
+  --taken: #1e3a31;
+  --taken-ink: #e9f1ed;
+  --held: #e9a23b;
+  --held-soft: #fbe8c8;
+  --backdrop: rgba(16, 42, 34, 0.45);
+  --shadow: 0 10px 30px -12px rgba(16, 42, 34, 0.35);
+
+  --font-ui: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-plate: 'Barlow Condensed', 'Be Vietnam Pro', system-ui, sans-serif;
+
+  --fs-xs: 12px;
+  --fs-sm: 13.5px;
+  --fs-base: 15px;
+  --fs-md: 17px;
+  --fs-lg: 21px;
+  --fs-xl: 30px;
+
+  --gutter: 16px;
+  --shell: 480px;
+  --tabbar-h: 62px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  color-scheme: light dark;
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--fog);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --fog: #0d1613;
+    --paper: #15211d;
+    --ink: #e3ede8;
+    --ink-2: #a3b5ad;
+    --ink-3: #6f847b;
+    --line: #2c3c36;
+    --line-soft: #22302b;
+    --moss: #4fc38a;
+    --moss-soft: #1b3a2c;
+    --hl-ink: #2a2400;
+    --signal: #ff5c74;
+    --signal-soft: #3d1a21;
+    --taken: #3a5a4e;
+    --taken-ink: #eef5f1;
+    --held: #f0b55a;
+    --held-soft: #3a2c14;
+    --backdrop: rgba(0, 0, 0, 0.6);
+    --shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+  }
+}
+
+:root[data-theme='dark'] {
+  --fog: #0d1613;
+  --paper: #15211d;
+  --ink: #e3ede8;
+  --ink-2: #a3b5ad;
+  --ink-3: #6f847b;
+  --line: #2c3c36;
+  --line-soft: #22302b;
+  --moss: #4fc38a;
+  --moss-soft: #1b3a2c;
+  --signal: #ff5c74;
+  --signal-soft: #3d1a21;
+  --taken: #3a5a4e;
+  --taken-ink: #eef5f1;
+  --held: #f0b55a;
+  --held-soft: #3a2c14;
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.7);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--fog);
+}
+
+body {
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+p,
+ol,
+ul,
+fieldset {
+  margin: 0;
+  padding: 0;
+}
+
+ol,
+ul {
+  list-style: none;
+}
+
+fieldset {
+  border: 0;
+  min-width: 0;
+}
+
+legend {
+  padding: 0;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--moss);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,21 @@
+{
+  // compilerOptions ở đây chỉ dành cho Vercel: khi biên dịch api/server.ts nó
+  // dùng tsconfig gốc — đổi import "./x.ts" thành "./x.js" để chạy được trên
+  // Vercel Functions. tsc -b dùng các project con bên dưới.
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "nodenext",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "types": ["node"]
+  },
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.server.json" }
+  ]
+}
