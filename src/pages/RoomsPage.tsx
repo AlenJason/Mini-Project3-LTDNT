@@ -49,6 +49,8 @@ export function RoomsPage() {
     (r) => (filter === 'all' || r.room.type === filter) && (!freeNowOnly || !isToday || r.state.kind === 'free'),
   )
   const freeNowCount = isToday ? rows.filter((r) => r.state.kind === 'free').length : null
+  const allClosed = isToday && rows.length > 0 && rows.every((r) => r.state.kind === 'closed')
+  const afterHours = allClosed && rooms !== null && (nowMinute ?? 0) >= Math.max(...rooms.map((r) => r.closeMinute))
 
   return (
     <>
@@ -61,7 +63,11 @@ export function RoomsPage() {
           <p className="summary">
             {freeNowCount > 0
               ? `${freeNowCount} trên ${rooms.length} phòng đang trống lúc ${formatMinute(Math.floor(nowMinute ?? 0))}.`
-              : 'Hiện không còn phòng trống. Xem các khung giờ sau hoặc chọn ngày khác.'}
+              : afterHours
+                ? 'Các phòng đã đóng cửa hôm nay. Chọn ngày khác để đặt trước.'
+                : allClosed
+                  ? 'Các phòng chưa mở cửa. Bạn vẫn đặt trước được các khung giờ hôm nay.'
+                  : 'Hiện không còn phòng trống. Xem các khung giờ sau hoặc chọn ngày khác.'}
           </p>
         )}
 

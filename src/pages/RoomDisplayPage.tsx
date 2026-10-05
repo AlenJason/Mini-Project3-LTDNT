@@ -1,10 +1,19 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CHECKIN_GRACE_MINUTES, isBlocking } from '../../shared/rules.ts'
-import { campusDate, campusMinute, formatMinute, formatRange } from '../../shared/time.ts'
+import { addDays, campusDate, campusMinute, formatMinute, formatRange } from '../../shared/time.ts'
+import type { Booking } from '../../shared/types.ts'
 import { useNow } from '../hooks/useNow.ts'
 import { useDay, useRealtime } from '../hooks/useRealtime.ts'
 import { roomLocation, roomStatusNow, shortName } from '../lib/rooms.ts'
+
+function roomBookings(all: Record<string, Booking> | undefined, roomId: string): Booking[] {
+  return all
+    ? Object.values(all)
+        .filter((b) => b.roomId === roomId && isBlocking(b))
+        .sort((a, b) => a.start - b.start)
+    : []
+}
 
 const STATE_TITLES = {
   free: 'Trống',
@@ -25,18 +34,13 @@ export function RoomDisplayPage() {
   const nowMinute = campusMinute(now)
   const rooms = useRealtime((s) => s.rooms)
   const status = useRealtime((s) => s.status)
+  const tomorrow = addDays(today, 1)
   const day = useDay(today)
+  const nextDay = useDay(tomorrow)
   const room = rooms?.find((r) => r.id === roomId)
 
-  const bookings = useMemo(
-    () =>
-      day
-        ? Object.values(day.bookings)
-            .filter((b) => b.roomId === roomId && isBlocking(b))
-            .sort((a, b) => a.start - b.start)
-        : [],
-    [day, roomId],
-  )
+  const bookings = useMemo(() => roomBookings(day?.bookings, roomId), [day, roomId])
+  const tomorrowBookings = useMemo(() => roomBookings(nextDay?.bookings, roomId), [nextDay, roomId])
   const holds = useMemo(
     () => (day ? Object.values(day.holds).filter((h) => h.roomId === roomId && h.expiresAt > now) : []),
     [day, roomId, now],
@@ -56,6 +60,10 @@ export function RoomDisplayPage() {
   const state = roomStatusNow(room, bookings, holds, nowMinute)
   const current = bookings.find((b) => b.start <= nowMinute && nowMinute < b.end)
   const upNext = bookings.filter((b) => b.start > nowMinute).slice(0, 4)
+  // Hết giờ mở cửa và không còn lịch hôm nay -> cho xem trước lịch ngày mai
+  const afterHours = nowMinute >= room.closeMinute
+  const showTomorrow = upNext.length === 0 && afterHours
+  const list = showTomorrow ? tomorrowBookings.slice(0, 4) : upNext
 
   return (
     <main className={`display display--${state.kind}`}>
@@ -76,7 +84,9 @@ export function RoomDisplayPage() {
             ? 'Một bạn đang điền thông tin đặt phòng.'
             : state.until !== undefined
               ? `tới ${formatMinute(state.until)}`
-              : state.label}
+              : afterHours
+                ? `Mở lại lúc ${formatMinute(room.openMinute)} ngày mai`
+                : state.label}
         </p>
         {current && (
           <p className="display__who">
@@ -89,12 +99,14 @@ export function RoomDisplayPage() {
       </section>
 
       <section className="display__next">
-        <h2 className="display__next-title">Tiếp theo hôm nay</h2>
-        {upNext.length === 0 ? (
-          <p className="display__empty">Không còn lịch nào. Đặt phòng này trên app Đặt Phòng VKU.</p>
+        <h2 className="display__next-title">{showTomorrow ? 'Lịch ngày mai' : 'Tiếp theo hôm nay'}</h2>
+        {list.length === 0 ? (
+          <p className="display__empty">
+            {showTomorrow ? 'Ngày mai chưa có lịch nào.' : 'Không còn lịch nào.'} Đặt phòng này trên app Đặt Phòng VKU.
+          </p>
         ) : (
           <ol className="display__list">
-            {upNext.map((b) => (
+            {list.map((b) => (
               <li key={b.id}>
                 <strong>{formatRange(b.start, b.end)}</strong>
                 <span>
